@@ -43,7 +43,7 @@ pub fn simulate_main() {
     // Set up binning
     let size: f64 = common::get_size(n);
     let bins: usize = common::get_num_bins(size);
-    let mut pointers: Vec<Vec<Particle>> = vec![Vec::new(); bins * bins];
+    let mut pointers: Vec<Vec<usize>> = vec![Vec::new(); bins * bins];
 
     // Populate bins
     {
@@ -56,10 +56,10 @@ pub fn simulate_main() {
 	    	let bin_i: usize = min!((particles[i as usize].x / CUTOFF) as usize, bins - 1);
 	    	let bin_j: usize = min!((particles[i as usize].y / CUTOFF) as usize, bins - 1);
 
-	        pointers[bin_i*bins + bin_j].push(particles[i as usize]);
+	        pointers[bin_i*bins + bin_j].push(i as usize);
 	    }
     }
-    
+   
 
     // let mut simulation_time = common::get_time();
     // for step in 0..NSTEPS {
