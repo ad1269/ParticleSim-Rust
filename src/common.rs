@@ -128,20 +128,20 @@ pub fn move_particle(p: &mut Particle, size: f64) {
 
 	while p.x < 0.0 || p.x > size {
 		if p.x < 0.0 {
-			p.x = -p.x
+			p.x = -p.x;
 		} else {
-			p.x = 2.0*size - p.x
+			p.x = 2.0*size - p.x;
 		}
-		p.vx = -p.vx
+		p.vx = -p.vx;
 	}
 
 	while p.y < 0.0 || p.y > size {
 		if p.y < 0.0 {
-			p.y = -p.y
+			p.y = -p.y;
 		} else {
-			p.y = 2.0*size - p.y
+			p.y = 2.0*size - p.y;
 		}
-		p.vy = -p.vy
+		p.vy = -p.vy;
 	}
 }
 

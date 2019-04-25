@@ -62,9 +62,9 @@ pub fn simulate_main() {
     let mut is_first_save: bool = true;
     let mut simulation_time = common::get_time();
     for step in 0..NSTEPS {
-        let mut navg = 0;
-        let mut davg = 0.;
-        let mut dmin = 1.;
+        navg = 0;
+        davg = 0.;
+        dmin = 1.;
 
         //
         //  compute forces
@@ -78,6 +78,7 @@ pub fn simulate_main() {
 
             for other_bin_i in (max!(0, (bin_i as i32) - 1) as usize)..=(min!(bins - 1, bin_i + 1) as usize) {
                 for other_bin_j in (max!(0, (bin_j as i32) - 1) as usize)..=(min!(bins - 1, bin_j + 1) as usize) {
+                    // println!("{} {} {} {}", bin_i, bin_j, other_bin_i, other_bin_j);
                     for k in 0..pointers[other_bin_i*bins + other_bin_j].len() {
                         let index1: usize = pointers[other_bin_i*bins + other_bin_j][k];
                         let particle1: Particle = particles[index1];
