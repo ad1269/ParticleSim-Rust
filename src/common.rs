@@ -96,8 +96,8 @@ pub fn init_particles(n: i32, particles: &mut [Particle], size: f64) {
 }
 
 pub fn apply_force(particle: &mut Particle, neighbor: &Particle, dmin: &mut f64, davg: &mut f64, navg: &mut i32) {
-	let dx = particle.x - neighbor.x;
-	let dy = particle.y - neighbor.y;
+	let dx = neighbor.x - particle.x;
+	let dy = neighbor.y - particle.y;
 	let mut r2 = dx*dx + dy*dy;
 
 	if r2 > CUTOFF*CUTOFF {
@@ -116,6 +116,7 @@ pub fn apply_force(particle: &mut Particle, neighbor: &Particle, dmin: &mut f64,
 	let r = r2.sqrt();
 
 	let coeff = ( 1.0 - CUTOFF / r ) / r2 / MASS;
+	//println!("{} {}", coeff);
 	particle.ax += coeff * dx;
 	particle.ay += coeff * dy;
 }

@@ -78,7 +78,6 @@ pub fn simulate_main() {
 
             for other_bin_i in (max!(0, (bin_i as i32) - 1) as usize)..=(min!(bins - 1, bin_i + 1) as usize) {
                 for other_bin_j in (max!(0, (bin_j as i32) - 1) as usize)..=(min!(bins - 1, bin_j + 1) as usize) {
-                    // println!("{} {} {} {}", bin_i, bin_j, other_bin_i, other_bin_j);
                     for k in 0..pointers[other_bin_i*bins + other_bin_j].len() {
                         let index1: usize = pointers[other_bin_i*bins + other_bin_j][k];
                         let particle1: Particle = particles[index1];
@@ -105,7 +104,7 @@ pub fn simulate_main() {
             if old_bin_j != new_bin_j || old_bin_i != new_bin_i {
 
                 let old_bin = &mut pointers[old_bin_i*bins + old_bin_j];
-                let index = old_bin.iter().position(|x| *x == i).unwrap();
+                let index = old_bin.iter().position(|&x| x == i).unwrap();
                 old_bin.remove(index);
 
                 let new_bin = &mut pointers[new_bin_i*bins + new_bin_j];
