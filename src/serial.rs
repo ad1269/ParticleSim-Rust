@@ -12,7 +12,6 @@ use common::{Particle, CUTOFF, NSTEPS, SAVEFREQ};
 pub fn simulate_main() {
 	let mut nabsavg: i32 = 0;
 	let mut navg: i32;
-
 	let (mut absmin, mut absavg): (f64, f64) = (1.0, 1.0);
  	let (mut davg, mut dmin): (f64, f64);
 
@@ -63,9 +62,9 @@ pub fn simulate_main() {
     let mut is_first_save: bool = true;
     let mut simulation_time = common::get_time();
     for step in 0..NSTEPS {
-    	navg = 0;
-    	davg = 0.;
-    	dmin = 1.;
+    	let mut navg = 0;
+    	let mut davg = 0.;
+    	let mut dmin = 1.;
         //
         //  compute forces
         //

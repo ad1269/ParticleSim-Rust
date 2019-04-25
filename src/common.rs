@@ -1,6 +1,7 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::io::{BufWriter, Write};
 use std::fs::File;
+use rand::Rng;
 
 #[macro_export]
 macro_rules! max {
@@ -75,9 +76,11 @@ pub fn init_particles(n: i32, particles: &mut [Particle], size: f64) {
 		shuffle[i as usize] = i;
 	}
 
+	let mut rng = rand::thread_rng();
+
 	for i in 0..n {
 		// Make sure particles are not spacially sorted
-		let j: usize = rand::random::<usize>() % ((n - i) as usize);
+		let j: usize = rng.gen_range(0, n-i) as usize; //rand::random::<usize>() % ((n - i) as usize);
 		let k: i32 = shuffle[j];
 		shuffle[j] = shuffle[(n - i - 1) as usize];
 
@@ -87,8 +90,8 @@ pub fn init_particles(n: i32, particles: &mut [Particle], size: f64) {
 		particles[i as usize].y = size * ((1 + (k / sx)) as f64) / ((1 + sy) as f64);
 
 		// Assign random velocities within a bound
-		particles[i as usize].vx = rand::random::<f64>()*2.0 - 1.0;
-		particles[i as usize].vy = rand::random::<f64>()*2.0 - 1.0;
+		particles[i as usize].vx = rng.gen_range(-1.0, 1.0); //rand::random::<f64>()*2.0 - 1.0;
+		particles[i as usize].vy = rng.gen_range(-1.0, 1.0); //rand::random::<f64>()*2.0 - 1.0;
 	}
 }
 
