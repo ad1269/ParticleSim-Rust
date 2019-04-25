@@ -39,8 +39,8 @@ pub const NSTEPS: i32 = 1000;
 pub const SAVEFREQ: i32 = 10;
 
 // Global variables
-static mut SIZE: f64 = 0.0;
-static mut FIRST: bool = true;
+// static mut SIZE: f64 = 0.0;
+// static mut FIRST: bool = true;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Particle {
@@ -52,9 +52,9 @@ pub struct Particle {
 	pub ay: f64
 }
 
-pub fn get_num_bins() -> usize {
+pub fn get_num_bins(size: f64) -> usize {
 	unsafe {
-		let bins: usize = (SIZE / CUTOFF).ceil() as usize;
+		let bins: usize = (size / CUTOFF).ceil() as usize;
 		return bins;
 	}
 }
@@ -64,13 +64,11 @@ pub fn get_time() -> f64 {
 	return (current_time.as_secs() as f64) + (current_time.subsec_millis() as f64)/1000.0;
 }
 
-pub fn set_size(n: i32) {
-	unsafe {
-		SIZE = ((n as f64) * DENSITY).sqrt();
-	}
+pub fn get_size(n: i32) -> f64 {
+	return ((n as f64) * DENSITY).sqrt();
 }
 
-pub fn init_particles(n: i32, particles: &mut [Particle]) {
+pub fn init_particles(n: i32, particles: &mut [Particle], size: f64) {
 	let sx: i32 = (n as f64).sqrt().ceil() as i32;
 	let sy: i32 = (sx + n - 1) / sx;
 
@@ -80,7 +78,6 @@ pub fn init_particles(n: i32, particles: &mut [Particle]) {
 	}
 
 	for i in 0..n {
-
 		// Make sure particles are not spacially sorted
 		let j: usize = rand::random::<usize>() % ((n - i) as usize);
 		let k: i32 = shuffle[j];
@@ -88,10 +85,8 @@ pub fn init_particles(n: i32, particles: &mut [Particle]) {
 
 		// Distributes particles evenly to ensure proper spacing
 		// Unsafe because of reference to SIZE
-		unsafe {
-			particles[i as usize].x = SIZE * ((1 + (k % sx)) as f64) / ((1 + sx) as f64);
-			particles[i as usize].y = SIZE * ((1 + (k % sx)) as f64) / ((1 + sy) as f64);
-		}
+		particles[i as usize].x = size * ((1 + (k % sx)) as f64) / ((1 + sx) as f64);
+		particles[i as usize].y = size * ((1 + (k % sx)) as f64) / ((1 + sy) as f64);
 
 		// Assign random velocities within a bound
 		particles[i as usize].vx = rand::random::<f64>()*2.0 - 1.0;
@@ -124,40 +119,34 @@ pub fn apply_force(particle: &mut Particle, neighbor: &Particle, dmin: &mut f64,
 	particle.ay += coeff * dy;
 }
 
-pub fn move_particle(p: &mut Particle) {
+pub fn move_particle(p: &mut Particle, size: f64) {
 	p.vx += p.ax * DT;
 	p.vy += p.ay * DT;
 	p.x += p.vx * DT;
 	p.y += p.vy * DT;
 
-	// Unsafe because of reference to SIZE
-	unsafe {
-		while p.x < 0.0 || p.x > SIZE {
-			if p.x < 0.0 {
-				p.x = -p.x
-			} else {
-				p.x = 2.0*SIZE - p.x
-			}
-			p.vx = -p.vx
+	while p.x < 0.0 || p.x > size {
+		if p.x < 0.0 {
+			p.x = -p.x
+		} else {
+			p.x = 2.0*size - p.x
 		}
+		p.vx = -p.vx
+	}
 
-		while p.y < 0.0 || p.y > SIZE {
-			if p.y < 0.0 {
-				p.y = -p.y
-			} else {
-				p.y = 2.0*SIZE - p.y
-			}
-			p.vy = -p.vy
+	while p.y < 0.0 || p.y > size {
+		if p.y < 0.0 {
+			p.y = -p.y
+		} else {
+			p.y = 2.0*size - p.y
 		}
+		p.vy = -p.vy
 	}
 }
 
-pub fn save(writer: &mut BufWriter<File>, n: i32, p: &[Particle]) {
-	unsafe {
-		if FIRST {
-			writeln!(writer, "{} {}", n, SIZE).unwrap();
-			FIRST = false;
-		}
+pub fn save(writer: &mut BufWriter<File>, n: i32, p: &[Particle], size: f64, is_first: bool) {
+	if is_first {
+		writeln!(writer, "{} {}", n, size).unwrap();
 	}
 
 	for i in 0..n {
