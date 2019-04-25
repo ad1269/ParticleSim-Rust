@@ -10,8 +10,8 @@ use std::env;
 use common::{Particle, CUTOFF, NSTEPS, SAVEFREQ};
 
 pub fn simulate_main() {
-	let (mut navg, mut nabsavg): (i32, i32) = (0, 0);
-	let (mut absmin, mut absavg, mut davg, mut dmin): (f64, f64, f64, f64) = (1.0, 1.0, 0.0, 0.0);
+	let mut nabsavg: i32 = 0;
+	let (mut absmin, mut absavg): (f64, f64) = (1.0, 1.0);
 
 	// Set and parse command line options
 	let args: Vec<String> = env::args().collect();
@@ -60,9 +60,9 @@ pub fn simulate_main() {
     let mut is_first_save: bool = true;
     let mut simulation_time = common::get_time();
     for step in 0..NSTEPS {
-    	navg = 0;
-    	davg = 0.;
-    	dmin = 1.;
+    	let mut navg = 0;
+    	let mut davg = 0.;
+    	let mut dmin = 1.;
         //
         //  compute forces
         //
@@ -102,18 +102,12 @@ pub fn simulate_main() {
             // Has been moved into a new bin
             if old_bin_j != new_bin_j || old_bin_i != new_bin_i {
 
-            	let mut old_bin = &mut pointers[old_bin_i*bins + old_bin_j];
+            	let old_bin = &mut pointers[old_bin_i*bins + old_bin_j];
 				let index = old_bin.iter().position(|x| *x == i).unwrap();
 				old_bin.remove(index);
 
-				let mut new_bin = &mut pointers[new_bin_i*bins + new_bin_j];
+				let new_bin = &mut pointers[new_bin_i*bins + new_bin_j];
 				new_bin.push(i);
-
-                // std::vector<particle_t*> &old_bin = pointers[old_bin_i*bins + old_bin_j];
-                // old_bin.erase(std::find(old_bin.begin(), old_bin.end(), &particles[i]));
-
-                // std::vector<particle_t*> &new_bin = pointers[new_bin_i*bins + new_bin_j];
-                // new_bin.push_back(&particles[i]);
             }
         }
           //
