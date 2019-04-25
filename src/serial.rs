@@ -39,17 +39,17 @@ pub fn simulate_main() {
 	// Open output file and writer
 	let write_file = File::create(savename).unwrap();
     let mut writer = BufWriter::new(&write_file);
-    common::set_size(n);
 
     // Set up binning
-    let bins: usize = common::get_num_bins();
+    let size: f64 = common::get_size(n);
+    let bins: usize = common::get_num_bins(size);
     let mut pointers: Vec<Vec<Particle>> = vec![Vec::new(); bins * bins];
 
     // Populate bins
     {
     	// Initialize particles
 	    let mut particles = vec![Particle{x: 0., y: 0., vx: 0., vy: 0., ax: 0., ay: 0.}; n as usize];
-	    common::init_particles(n, &mut particles);
+	    common::init_particles(n, &mut particles, size);
 
 	    // Categorize into bins
 	    for i in 0..n {
