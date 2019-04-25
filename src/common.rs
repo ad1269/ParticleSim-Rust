@@ -107,9 +107,9 @@ pub fn apply_force(particle: &mut Particle, neighbor: &Particle, dmin: &mut f64,
 	if r2 != 0.0 {
 		if r2 / (CUTOFF * CUTOFF) < (*dmin) * (*dmin) {
 			*dmin = r2.sqrt() / CUTOFF;
-			*davg += r2.sqrt() / CUTOFF;
-			*navg += 1;
 		}
+		*davg += r2.sqrt() / CUTOFF;
+		*navg += 1;
 	}
 
 	r2 = r2.max(MIN_R*MIN_R);
