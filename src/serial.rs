@@ -38,7 +38,7 @@ pub fn simulate_main() {
 
 	// Open output file and writer
 	let write_file = File::create(savename).unwrap();
-    let mut writer = BufWriter::new(&write_file);
+    let mut writer: BufWriter<File> = BufWriter::new(write_file);
 
     // Set up binning
     let size: f64 = common::get_size(n);
@@ -56,32 +56,105 @@ pub fn simulate_main() {
 
         pointers[bin_i*bins + bin_j].push(i as usize);
     }
-    
-   
 
-    // let mut simulation_time = common::get_time();
-    // for step in 0..NSTEPS {
-    // 	navg = 0;
-    // 	davg = 0.;
-    // 	dmin = 1.;
+    let mut is_first_save: bool = true;
+    let mut simulation_time = common::get_time();
+    for step in 0..NSTEPS {
+    	navg = 0;
+    	davg = 0.;
+    	dmin = 1.;
+        //
+        //  compute forces
+        //
+        for i in 0..particles.len() {
+            particles[i as usize].ax = 0.;
+            particles[i as usize].ay = 0.;
 
-    // 	// Compute forces
-    // 	for bin_i in 0..bins {
-    // 		for bin_j in 0..bins {
-    // 			for i in 0..pointers[bin_i*bins + bin_j].len() {
-		  //   		pointers[bin_i*bins + bin_j][i].ax = 0.;
-		  //   		pointers[bin_i*bins + bin_j][i].ay = 0.;
+	    	let bin_i: usize = min!((particles[i as usize].x / CUTOFF) as usize, bins - 1);
+	    	let bin_j: usize = min!((particles[i as usize].y / CUTOFF) as usize, bins - 1);
+	    	// let index0: usize = pointers[bin_i*bins + bin_j][i];
 
-		  //   		for other_bin_i in (max!(0, (bin_i as i32) - 1) as usize)..=min!(bins - 1, bin_i + 1) {
-		  //   			for other_bin_j in (max!(0, (bin_j as i32) - 1) as usize)..=min!(bins - 1, bin_j + 1) {
-		  //   				for k in 0..pointers[other_bin_i*bins + other_bin_j].len() {
-		  //   					common::apply_force(&mut pointers[bin_i*bins + bin_j][i], &pointers[other_bin_i*bins + other_bin_j][k], &mut dmin, &mut davg, &mut navg);
-		  //   				}
-		  //   			}
-		  //   		}
-		  //   	}
-	   //  	}
-    // 	}
+    		for other_bin_i in (max!(0, (bin_i as i32) - 1) as usize)..=(min!(bins - 1, bin_i + 1) as usize) {
+    			for other_bin_j in (max!(0, (bin_j as i32) - 1) as usize)..=(min!(bins - 1, bin_j + 1) as usize) {
+               		for k in 0..pointers[other_bin_i*bins + other_bin_j].len() {
+               			let index1: usize = pointers[other_bin_i*bins + other_bin_j][k];
+               			let particle1: Particle = particles[index1];
+	    				common::apply_force(&mut particles[i], &particle1, &mut dmin, &mut davg, &mut navg);
+	    			}
+                }
+            }
+        }
+ 
+        //
+        //  move particles
+        //
 
-    // }
+        for i in 0..particles.len() {
+
+	    	let old_bin_i: usize = min!((particles[i as usize].x / CUTOFF) as usize, bins - 1);
+	    	let old_bin_j: usize = min!((particles[i as usize].y / CUTOFF) as usize, bins - 1);
+
+            common::move_particle( &mut particles[i], size ); 
+
+	    	let new_bin_i: usize = min!((particles[i as usize].x / CUTOFF) as usize, bins - 1);
+	    	let new_bin_j: usize = min!((particles[i as usize].y / CUTOFF) as usize, bins - 1);
+
+            // Has been moved into a new bin
+            if old_bin_j != new_bin_j || old_bin_i != new_bin_i {
+
+            	let mut old_bin = &mut pointers[old_bin_i*bins + old_bin_j];
+				let index = old_bin.iter().position(|x| *x == i).unwrap();
+				old_bin.remove(index);
+
+				let mut new_bin = &mut pointers[new_bin_i*bins + new_bin_j];
+				new_bin.push(i);
+
+                // std::vector<particle_t*> &old_bin = pointers[old_bin_i*bins + old_bin_j];
+                // old_bin.erase(std::find(old_bin.begin(), old_bin.end(), &particles[i]));
+
+                // std::vector<particle_t*> &new_bin = pointers[new_bin_i*bins + new_bin_j];
+                // new_bin.push_back(&particles[i]);
+            }
+        }
+          //
+          // Computing statistical data
+          //
+          if navg != 0 {
+            absavg +=  davg/(navg as f64);
+            nabsavg += 1;
+          }
+          if dmin < absmin {
+          	absmin = dmin;
+          }
+        
+          //
+          //  save if necessary
+          //
+          if (step%SAVEFREQ) == 0 {
+              common::save( &mut writer, n, &particles, size, is_first_save );
+              is_first_save = false;
+          }
+    }
+    simulation_time = common::get_time() - simulation_time;
+    println!( "n = {}, simulation time = {} seconds", n, simulation_time);
+
+
+    if nabsavg != 0 {
+    	absavg /= nabsavg as f64;
+    }
+
+    // 
+    //  -The minimum distance absmin between 2 particles during the run of the simulation
+    //  -A Correct simulation will have particles stay at greater than 0.4 (of cutoff) with typical values between .7-.8
+    //  -A simulation where particles don't interact correctly will be less than 0.4 (of cutoff) with typical values between .01-.05
+    //
+    //  -The average distance absavg is ~.95 when most particles are interacting correctly and ~.66 when no particles are interacting
+    //
+    println!(", absmin = {}, absavg = {}", absmin, absavg);
+    if absmin < 0.4 {
+    	println! ("\nThe minimum distance is below 0.4 meaning that some particle is not interacting");
+    }
+    if absavg < 0.8 {
+    	println! ("\nThe average distance is below 0.8 meaning that most particles are not interacting");
+    }
 }
