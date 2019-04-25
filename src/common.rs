@@ -116,7 +116,6 @@ pub fn apply_force(particle: &mut Particle, neighbor: &Particle, dmin: &mut f64,
 	let r = r2.sqrt();
 
 	let coeff = ( 1.0 - CUTOFF / r ) / r2 / MASS;
-	//println!("{} {}", coeff);
 	particle.ax += coeff * dx;
 	particle.ay += coeff * dy;
 }
