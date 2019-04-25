@@ -53,10 +53,8 @@ pub struct Particle {
 }
 
 pub fn get_num_bins(size: f64) -> usize {
-	unsafe {
-		let bins: usize = (size / CUTOFF).ceil() as usize;
-		return bins;
-	}
+	let bins: usize = (size / CUTOFF).ceil() as usize;
+	return bins;
 }
 
 pub fn get_time() -> f64 {
