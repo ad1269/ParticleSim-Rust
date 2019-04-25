@@ -39,19 +39,16 @@ pub fn simulate_main() {
 	// Open output file and writer
 	let write_file = File::create(savename).unwrap();
     let mut writer = BufWriter::new(&write_file);
+    common::set_size(n);
 
     // Set up binning
     let bins: usize = common::get_num_bins();
-    let mut pointers: Vec<Vec<Particle>> = Vec::new();
-    for i in &mut pointers {
-    	*i = Vec::new();
-    }
+    let mut pointers: Vec<Vec<Particle>> = vec![Vec::new(); bins * bins];
 
     // Populate bins
     {
     	// Initialize particles
-	    let mut particles: Box<[Particle]> = vec![Particle{x: 0., y: 0., vx: 0., vy: 0., ax: 0., ay: 0.}; n as usize].into_boxed_slice();
-	    common::set_size(n);
+	    let mut particles = vec![Particle{x: 0., y: 0., vx: 0., vy: 0., ax: 0., ay: 0.}; n as usize];
 	    common::init_particles(n, &mut particles);
 
 	    // Categorize into bins
@@ -64,29 +61,29 @@ pub fn simulate_main() {
     }
     
 
-    let mut simulation_time = common::get_time();
-    for step in 0..NSTEPS {
-    	navg = 0;
-    	davg = 0.;
-    	dmin = 1.;
+    // let mut simulation_time = common::get_time();
+    // for step in 0..NSTEPS {
+    // 	navg = 0;
+    // 	davg = 0.;
+    // 	dmin = 1.;
 
-    	// Compute forces
-    	for bin_i in 0..bins {
-    		for bin_j in 0..bins {
-    			for i in 0..pointers[bin_i*bins + bin_j].len() {
-		    		pointers[bin_i*bins + bin_j][i].ax = 0.;
-		    		pointers[bin_i*bins + bin_j][i].ay = 0.;
+    // 	// Compute forces
+    // 	for bin_i in 0..bins {
+    // 		for bin_j in 0..bins {
+    // 			for i in 0..pointers[bin_i*bins + bin_j].len() {
+		  //   		pointers[bin_i*bins + bin_j][i].ax = 0.;
+		  //   		pointers[bin_i*bins + bin_j][i].ay = 0.;
 
-		    		for other_bin_i in (max!(0, (bin_i as i32) - 1) as usize)..=min!(bins - 1, bin_i + 1) {
-		    			for other_bin_j in (max!(0, (bin_j as i32) - 1) as usize)..=min!(bins - 1, bin_j + 1) {
-		    				for k in 0..pointers[other_bin_i*bins + other_bin_j].len() {
-		    					common::apply_force(&mut pointers[bin_i*bins + bin_j][i], &pointers[other_bin_i*bins + other_bin_j][k], &mut dmin, &mut davg, &mut navg);
-		    				}
-		    			}
-		    		}
-		    	}
-	    	}
-    	}
+		  //   		for other_bin_i in (max!(0, (bin_i as i32) - 1) as usize)..=min!(bins - 1, bin_i + 1) {
+		  //   			for other_bin_j in (max!(0, (bin_j as i32) - 1) as usize)..=min!(bins - 1, bin_j + 1) {
+		  //   				for k in 0..pointers[other_bin_i*bins + other_bin_j].len() {
+		  //   					common::apply_force(&mut pointers[bin_i*bins + bin_j][i], &pointers[other_bin_i*bins + other_bin_j][k], &mut dmin, &mut davg, &mut navg);
+		  //   				}
+		  //   			}
+		  //   		}
+		  //   	}
+	   //  	}
+    // 	}
 
-    }
+    // }
 }
