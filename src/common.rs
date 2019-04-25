@@ -84,7 +84,7 @@ pub fn init_particles(n: i32, particles: &mut [Particle], size: f64) {
 		// Distributes particles evenly to ensure proper spacing
 		// Unsafe because of reference to SIZE
 		particles[i as usize].x = size * ((1 + (k % sx)) as f64) / ((1 + sx) as f64);
-		particles[i as usize].y = size * ((1 + (k % sx)) as f64) / ((1 + sy) as f64);
+		particles[i as usize].y = size * ((1 + (k / sx)) as f64) / ((1 + sy) as f64);
 
 		// Assign random velocities within a bound
 		particles[i as usize].vx = rand::random::<f64>()*2.0 - 1.0;
