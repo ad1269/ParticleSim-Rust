@@ -11,7 +11,9 @@ use common::{Particle, CUTOFF, NSTEPS, SAVEFREQ};
 
 pub fn simulate_main() {
 	let mut nabsavg: i32 = 0;
+	let mut navg: i32;
 	let (mut absmin, mut absavg): (f64, f64) = (1.0, 1.0);
+ 	let (mut davg, mut dmin): (f64, f64);
 
 	// Set and parse command line options
 	let args: Vec<String> = env::args().collect();
@@ -88,7 +90,6 @@ pub fn simulate_main() {
         //
         //  move particles
         //
-
         for i in 0..particles.len() {
 
 	    	let old_bin_i: usize = min!((particles[i as usize].x / CUTOFF) as usize, bins - 1);
@@ -110,6 +111,7 @@ pub fn simulate_main() {
 				new_bin.push(i);
             }
         }
+        
           //
           // Computing statistical data
           //
