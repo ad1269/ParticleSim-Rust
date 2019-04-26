@@ -4,43 +4,16 @@ mod common;
 
 use std::fs::File;
 use std::io::BufWriter;
-use getopts::Options;
-use std::env;
+use std::cmp::{min, max};
 
 use common::{Particle, CUTOFF, NSTEPS, SAVEFREQ};
 
-pub fn simulate_main() {
+
+pub fn simulate_main(writer: &mut BufWriter<File>, n: i32) {
     let mut nabsavg: i32 = 0;
     let mut navg: i32;
     let (mut absmin, mut absavg): (f64, f64) = (1.0, 1.0);
     let (mut davg, mut dmin): (f64, f64);
-
-    // Set and parse command line options
-    let args: Vec<String> = env::args().collect();
-    let mut opts = Options::new();
-    opts.optopt("n", "", "set number of particles", "NUM");
-    opts.optopt("o", "", "set output file name", "NAME");
-    let matches = match opts.parse(&args[1..]) {
-        Ok(m) => { m }
-        Err(f) => { panic!(f.to_string()) }
-    };
-
-    // Read and set command line options
-    let n: i32 = if matches.opt_present("n") {
-        matches.opt_str("n").unwrap().parse::<i32>().unwrap()
-    } else {
-        500
-    };
-
-    let savename: String = if matches.opt_present("o") {
-        matches.opt_str("o").unwrap()
-    } else {
-        "out".to_string()
-    };
-
-    // Open output file and writer
-    let write_file = File::create(savename).unwrap();
-    let mut writer: BufWriter<File> = BufWriter::new(write_file);
 
     // Set up binning
     let size: f64 = common::get_size(n);
@@ -53,8 +26,8 @@ pub fn simulate_main() {
 
     // Categorize into bins
     for i in 0..n {
-        let bin_i: usize = min!((particles[i as usize].x / CUTOFF) as usize, bins - 1);
-        let bin_j: usize = min!((particles[i as usize].y / CUTOFF) as usize, bins - 1);
+        let bin_i: usize = min((particles[i as usize].x / CUTOFF) as usize, bins - 1);
+        let bin_j: usize = min((particles[i as usize].y / CUTOFF) as usize, bins - 1);
 
         pointers[bin_i*bins + bin_j].push(i as usize);
     }
@@ -73,11 +46,11 @@ pub fn simulate_main() {
             particles[i as usize].ax = 0.;
             particles[i as usize].ay = 0.;
 
-            let bin_i: usize = min!((particles[i as usize].x / CUTOFF) as usize, bins - 1);
-            let bin_j: usize = min!((particles[i as usize].y / CUTOFF) as usize, bins - 1);
+            let bin_i: usize = min((particles[i as usize].x / CUTOFF) as usize, bins - 1);
+            let bin_j: usize = min((particles[i as usize].y / CUTOFF) as usize, bins - 1);
 
-            for other_bin_i in (max!(0, (bin_i as i32) - 1) as usize)..=(min!(bins - 1, bin_i + 1) as usize) {
-                for other_bin_j in (max!(0, (bin_j as i32) - 1) as usize)..=(min!(bins - 1, bin_j + 1) as usize) {
+            for other_bin_i in (max(0, (bin_i as i32) - 1) as usize)..=(min(bins - 1, bin_i + 1) as usize) {
+                for other_bin_j in (max(0, (bin_j as i32) - 1) as usize)..=(min(bins - 1, bin_j + 1) as usize) {
                     for k in 0..pointers[other_bin_i*bins + other_bin_j].len() {
                         let index1: usize = pointers[other_bin_i*bins + other_bin_j][k];
                         let particle1: Particle = particles[index1];
@@ -92,13 +65,13 @@ pub fn simulate_main() {
         //
         for i in 0..particles.len() {
 
-            let old_bin_i: usize = min!((particles[i as usize].x / CUTOFF) as usize, bins - 1);
-            let old_bin_j: usize = min!((particles[i as usize].y / CUTOFF) as usize, bins - 1);
+            let old_bin_i: usize = min((particles[i as usize].x / CUTOFF) as usize, bins - 1);
+            let old_bin_j: usize = min((particles[i as usize].y / CUTOFF) as usize, bins - 1);
 
             common::move_particle( &mut particles[i], size ); 
 
-            let new_bin_i: usize = min!((particles[i as usize].x / CUTOFF) as usize, bins - 1);
-            let new_bin_j: usize = min!((particles[i as usize].y / CUTOFF) as usize, bins - 1);
+            let new_bin_i: usize = min((particles[i as usize].x / CUTOFF) as usize, bins - 1);
+            let new_bin_j: usize = min((particles[i as usize].y / CUTOFF) as usize, bins - 1);
 
             // Has been moved into a new bin
             if old_bin_j != new_bin_j || old_bin_i != new_bin_i {
@@ -127,7 +100,7 @@ pub fn simulate_main() {
         //  save if necessary
         //
         if (step%SAVEFREQ) == 0 {
-            common::save( &mut writer, n, &particles, size, is_first_save );
+            common::save( writer, n, &particles, size, is_first_save );
             is_first_save = false;
         }
     }
