@@ -30,6 +30,7 @@ pub fn simulate_main(writer: &mut BufWriter<File>, n: i32) {
     common::init_particles(n, &mut particles, size);
 
     let mut particle_to_bin = vec![0; n as usize]; // particle index -> bin index
+    let mut all_bin_sizes = vec![0; bins*bins];
 
     fn particle_to_bin_i(p: &Particle, bins: usize) -> usize { return min((p.x / CUTOFF) as usize, bins - 1); }
     fn particle_to_bin_j(p: &Particle, bins: usize) -> usize { return min((p.y / CUTOFF) as usize, bins - 1); }
@@ -55,7 +56,7 @@ pub fn simulate_main(writer: &mut BufWriter<File>, n: i32) {
         // compute bins for each particle (should be sorted now)
         particle_to_bin.par_iter_mut().enumerate().for_each(|(i, bin_idx)| *bin_idx = particle_to_bin_idx(&particles[i], bins));
 
-        fn reduction_fn(mut a: Vec<(usize,i32)>, b: Vec<(usize,i32)>) -> Vec<(usize,i32)> {
+        fn reduction_fn(mut a: Vec<(usize,i32)>, mut b: Vec<(usize,i32)>) -> Vec<(usize,i32)> {
             if b.len() == 0 { return a; }
             if a.len() == 0 { a.extend(b); return a; }
 
@@ -63,18 +64,45 @@ pub fn simulate_main(writer: &mut BufWriter<File>, n: i32) {
 
             if a[alen-1].0 == b[0].0 {
                 a[alen-1].1 += b[0].1;
-                a.extend(&b[1..]);
+                a.append(&mut b[1..].to_vec());
                 return a;
             } else {
-                a.extend(b);
+
+                for k in (a[alen-1].0 + 1)..=(b[0].0 - 1) {
+                    a.push((k, 0));
+                }
+
+                a.append(&mut b);
                 return a;
             }
 
         }
-        let blah : Vec<(usize,i32)> = particle_to_bin.par_iter().map(|&i| vec![(i,1); 1]).reduce(
+        let mut bin_count_pairs : Vec<(usize,i32)> = particle_to_bin.par_iter().map(|&i| vec![(i,1); 1]).reduce(
             || Vec::new(),
             reduction_fn
         );
+        if bin_count_pairs[0].0 != 0 {
+            let count = bin_count_pairs[0].0;
+            let mut bin_count_pairs_front : Vec<(usize,i32)> = Vec::with_capacity(bins*bins);
+            for i in 0..count {
+                bin_count_pairs_front.push((i, 0));
+            }
+            bin_count_pairs_front.append(&mut bin_count_pairs);
+            bin_count_pairs = bin_count_pairs_front;
+        }
+        let bin_count_pairs_len = bin_count_pairs.len();
+        if bin_count_pairs[bin_count_pairs_len-1].0 != bins*bins-1 {
+            let count = bin_count_pairs[bin_count_pairs_len-1].0;
+            for i in count+1..(bins*bins) {
+                bin_count_pairs.push((count, 0));
+            }
+        }
+        assert_eq!(bin_count_pairs.len(), bins*bins);
+
+        // all_bin_sizes.par_iter_mut().for_each(|x| *x = 0);
+        // bin_count_pairs.par_iter().for_each(|(bin,count)| all_bin_sizes[*bin] = *count);
+
+
         // let asdf = Vec::new();
         // rayon::par_iter::collect::collect_into(, asdf);
         // let asdf: Vec<Vec<(usize,i32)>> = particle_to_bin.par_iter().map(|&i| vec![(i,1); 1]).collect();
