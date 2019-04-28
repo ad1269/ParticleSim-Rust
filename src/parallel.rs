@@ -5,12 +5,55 @@ mod common;
 use std::fs::File;
 use std::io::BufWriter;
 use std::cmp::{min, max};
+use std::collections::{LinkedList};
 
 use common::{Particle, CUTOFF, NSTEPS, SAVEFREQ};
 
 extern crate rayon;
 use rayon::prelude::*;
 // use rayon::par_iter;
+
+fn run_length_encoding(list: &Vec<i32>) -> Vec<i32> {
+    let len = list.len();
+    if len == 0 {
+        return Vec::new()
+    } else if len <= 25000 {
+        let mut encoded: Vec<i32> = Vec::with_capacity(len);
+        encoded.push(list[0]);
+        for i in 1..len {
+            encoded.push(encoded[i - 1] + list[i]);
+        }
+        return encoded;
+    }
+
+    fn fold_sum_fn(mut a: Vec<i32>, b: &i32) -> Vec<i32> {
+        if a.len() == 0 {
+            a.push(*b);
+            return a;
+        }
+
+        let alen:usize = a.len();
+        a.push(a[alen - 1] + *b);
+        return a;
+    }
+
+    fn map_offset_fn(run: &Vec<i32>) -> i32 {
+        let len = run.len();
+        return run[len - 1];
+    }
+
+    fn map_add_fn((offset, run): (&i32, Vec<i32>)) -> Vec<i32> {
+        return run.par_iter().map(|&i| i + offset).collect();
+    }
+
+    let partial_runs: Vec<Vec<i32>> = list.par_iter().fold(|| Vec::new(), fold_sum_fn).collect();
+    let mut group_offsets: Vec<i32> = run_length_encoding(&partial_runs.par_iter().map(map_offset_fn).collect());
+    group_offsets.pop();
+    group_offsets.insert(0, 0);
+
+    assert_eq!(group_offsets.len(), partial_runs.len());
+    return group_offsets.par_iter().zip(partial_runs).flat_map(map_add_fn).collect();
+}
 
 pub fn simulate_main(writer: &mut BufWriter<File>, n: i32) {
     println!("===== PARALLEL =====");
@@ -58,7 +101,10 @@ pub fn simulate_main(writer: &mut BufWriter<File>, n: i32) {
 
         fn reduction_fn(mut a: Vec<(usize,i32)>, mut b: Vec<(usize,i32)>) -> Vec<(usize,i32)> {
             if b.len() == 0 { return a; }
-            if a.len() == 0 { a.extend(b); return a; }
+            if a.len() == 0 {
+                a.extend(b);
+                return a;
+            }
 
             let alen:usize = a.len();
 
@@ -67,8 +113,7 @@ pub fn simulate_main(writer: &mut BufWriter<File>, n: i32) {
                 a.append(&mut b[1..].to_vec());
                 return a;
             } else {
-
-                for k in (a[alen-1].0 + 1)..=(b[0].0 - 1) {
+                for k in (a[alen-1].0 + 1)..b[0].0 {
                     a.push((k, 0));
                 }
 
@@ -77,6 +122,7 @@ pub fn simulate_main(writer: &mut BufWriter<File>, n: i32) {
             }
 
         }
+
         let mut bin_count_pairs : Vec<(usize,i32)> = particle_to_bin.par_iter().map(|&i| vec![(i,1); 1]).reduce(
             || Vec::new(),
             reduction_fn
@@ -98,6 +144,11 @@ pub fn simulate_main(writer: &mut BufWriter<File>, n: i32) {
             }
         }
         assert_eq!(bin_count_pairs.len(), bins*bins);
+
+        let all_bin_offsets = run_length_encoding(&bin_count_pairs.par_iter().map(|&i| i.1).collect());
+        println!("{:?}", all_bin_offsets);
+
+        
 
         // all_bin_sizes.par_iter_mut().for_each(|x| *x = 0);
         // bin_count_pairs.par_iter().for_each(|(bin,count)| all_bin_sizes[*bin] = *count);
