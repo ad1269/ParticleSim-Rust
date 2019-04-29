@@ -130,38 +130,48 @@ pub fn simulate_main(writer: &mut BufWriter<File>, n: i32) {
         if bin_count_pairs[bin_count_pairs_len-1].0 != bins*bins-1 {
             let count = bin_count_pairs[bin_count_pairs_len-1].0;
             for i in count+1..(bins*bins) {
-                bin_count_pairs.push((count, 0));
+                bin_count_pairs.push((i, 0)); // TODO bug: i or count?
             }
         }
         assert_eq!(bin_count_pairs.len(), bins*bins);
+        assert_eq!(bin_count_pairs[bins*bins-1].0, bins*bins-1);
+        assert_eq!(bin_count_pairs[0].0, 0);
+        // println!("{:?}", bin_count_pairs);
 
-        let all_bin_offsets = run_length_encoding(&bin_count_pairs.par_iter().map(|&i| i.1).collect());
-        
-        fn get_particle(pointers: &Vec<Particle>, all_bin_offsets: &Vec<i32>, bins: usize, bin_i: usize, bin_j: usize, p: i32) -> Particle {
-            let currentBinNum = bin_i*bins + bin_j;
-            return pointers[(all_bin_offsets[currentBinNum] + p) as usize];
-        }
+        let mut all_bin_offsets = run_length_encoding(&bin_count_pairs.par_iter().map(|&i| i.1).collect());
+        all_bin_offsets.pop();
+        all_bin_offsets.insert(0,0);
+        // println!("{:?}", all_bin_offsets);
 
-        fn apply_force(p: &mut Particle, particles: Vec<Particle>, n: i32, bins: usize, bin_count_pairs: Vec<(usize, i32)>, all_bin_offsets: Vec<i32>) {
+        // fn get_particle(pointers: &Vec<Particle>, all_bin_offsets: &Vec<i32>, bins: usize, bin_i: usize, bin_j: usize, p: i32) -> Particle {
+        //     let currentBinNum = bin_i*bins + bin_j;
+        //     return pointers[(all_bin_offsets[currentBinNum] + p) as usize];
+        // }
+
+        fn apply_force(p: &mut Particle, particles: &Vec<Particle>, n: i32, bins: usize, bin_count_pairs: &Vec<(usize, i32)>, all_bin_offsets: &Vec<i32>) {
             p.ax = 0.;
             p.ay = 0.;
 
-            let bin_i: usize = min((p.x / CUTOFF) as usize, bins - 1);
-            let bin_j: usize = min((p.y / CUTOFF) as usize, bins - 1);
+            let bin_i: usize = particle_to_bin_i(p, bins);
+            let bin_j: usize = particle_to_bin_j(p, bins);
             let (mut dmin, mut davg, mut navg): (f64, f64, i32) = (1.0, 1.0, 0);
+
             for other_bin_i in (max(0, (bin_i as i32) - 1) as usize)..=(min(bins - 1, bin_i + 1) as usize) {
                 for other_bin_j in (max(0, (bin_j as i32) - 1) as usize)..=(min(bins - 1, bin_j + 1) as usize) {
-                    for k in 0..bin_count_pairs[other_bin_i*bins + other_bin_j].1 {
-                        let other_particle = get_particle(&particles, &all_bin_offsets, bins, other_bin_i, other_bin_j, k);
-                        
-                        common::apply_force(&mut p, &other_particle, &mut dmin, &mut davg, &mut navg);
+
+                    let other_idx: usize = other_bin_i*bins + other_bin_j;
+                    for k in 0..bin_count_pairs[other_idx].1 {
+                        //let other_particle = get_particle(&particles, &all_bin_offsets, bins, other_bin_i, other_bin_j, k);
+                        // common::apply_force(p, &other_particle, &mut dmin, &mut davg, &mut navg);
+                        common::apply_force(p, &particles[(all_bin_offsets[other_idx] + k) as usize], &mut dmin, &mut davg, &mut navg);
                     }
                 }
             }
         }
 
         // Apply forces
-        particles.par_iter_mut().for_each(|&mut p| apply_force(&mut p, particles, n, bins, bin_count_pairs, all_bin_offsets)); 
+        let particles2 = particles.clone();
+        particles.par_iter_mut().for_each(|p| apply_force(p, &particles2, n, bins, &bin_count_pairs, &all_bin_offsets)); 
 
         // move particles
         particles.par_iter_mut().for_each(|p| common::move_particle(p, size)); 
