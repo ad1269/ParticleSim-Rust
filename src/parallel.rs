@@ -26,14 +26,18 @@ fn run_length_encoding(list: &Vec<i32>) -> Vec<i32> {
         return encoded;
     }
 
-    fn fold_sum_fn(mut a: Vec<i32>, b: &i32) -> Vec<i32> {
+    fn reduce_sum_fn(mut a: Vec<i32>, b: Vec<i32>) -> Vec<i32> {
         if a.len() == 0 {
-            a.push(*b);
+            a.extend(b);
+            return a;
+        } else if b.len() == 0 {
             return a;
         }
-
         let alen:usize = a.len();
-        a.push(a[alen - 1] + *b);
+        let offset = a[alen-1];
+
+        let summedB: Vec<i32> = b.iter().map(|val| val + offset).collect();
+        a.extend(summedB);
         return a;
     }
 
@@ -46,13 +50,8 @@ fn run_length_encoding(list: &Vec<i32>) -> Vec<i32> {
         return run.par_iter().map(|&i| i + offset).collect();
     }
 
-    let partial_runs: Vec<Vec<i32>> = list.par_iter().fold(|| Vec::new(), fold_sum_fn).collect();
-    let mut group_offsets: Vec<i32> = run_length_encoding(&partial_runs.par_iter().map(map_offset_fn).collect());
-    group_offsets.pop();
-    group_offsets.insert(0, 0);
-
-    assert_eq!(group_offsets.len(), partial_runs.len());
-    return group_offsets.par_iter().zip(partial_runs).flat_map(map_add_fn).collect();
+    let partial_runs: Vec<i32> = list.par_iter().map(|&i| vec![i; 1]).reduce(|| Vec::new(), reduce_sum_fn);
+    return partial_runs;
 }
 
 pub fn simulate_main(writer: &mut BufWriter<File>, n: i32) {
